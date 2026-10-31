@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Runtime renforcé : autorise l'envoi d'Apple Events (Musique, Spotify) -->
+	<key>com.apple.security.automation.apple-events</key>
+	<true/>
+	<!-- Runtime renforcé : autorise l'accès au calendrier (EventKit) -->
+	<key>com.apple.security.personal-information.calendars</key>
+	<true/>
+</dict>
+</plist>
