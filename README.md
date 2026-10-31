@@ -3,6 +3,19 @@
 Dynamic Island autour de l'encoche du MacBook (ou pilule noire centrée sur les Mac sans encoche).
 Swift 5.9+, SwiftUI + AppKit, macOS 14+, aucune dépendance externe.
 
+## Installation (sans compiler)
+
+1. Téléchargez `IleDynamique-x.y.dmg` depuis la page [Releases](https://github.com/capitainepoof8/IleDynamique/releases/latest).
+2. Ouvrez le DMG et glissez **IleDynamique** sur le raccourci **Applications**.
+3. Premier lancement : l'app n'est pas signée par un développeur Apple identifié, macOS la bloque.
+   - Ouvrez-la une fois (message d'avertissement), puis allez dans
+     *Réglages Système → Confidentialité et sécurité* et cliquez **Ouvrir quand même** ;
+   - ou, dans le Terminal : `xattr -dr com.apple.quarantine /Applications/IleDynamique.app`
+
+Binaire universel (Apple Silicon + Intel), macOS 14 ou plus récent.
+
+Pour produire le DMG soi-même : `./scripts/creer-dmg.sh` (résultat dans `build/`).
+
 ## Arborescence
 
 ```
@@ -12,7 +25,8 @@ dinamique/
 ├── Resources/
 │   ├── Info.plist                # LSUIElement, descriptions d'autorisations
 │   └── IleDynamique.entitlements # Apple Events + calendrier (runtime renforcé)
-├── scripts/construire-app.sh     # compile + emballe build/IleDynamique.app
+├── scripts/construire-app.sh     # compile (universel) + emballe build/IleDynamique.app
+├── scripts/creer-dmg.sh          # crée le DMG et le zip à distribuer
 └── Sources/IleDynamique/
     ├── App/            Principal.swift (point d'entrée), AppDelegate.swift (barre des menus)
     ├── Fenetre/        PanneauIle.swift, ControleurFenetre.swift, GeometrieEncoche.swift

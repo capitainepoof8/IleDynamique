@@ -1,5 +1,6 @@
 #!/bin/zsh
-# Compile le paquet Swift et l'emballe dans build/IleDynamique.app (signature ad hoc).
+# Compile le paquet Swift (binaire universel Apple Silicon + Intel)
+# et l'emballe dans build/IleDynamique.app (signature ad hoc).
 # Usage : ./scripts/construire-app.sh [release|debug]
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -7,8 +8,9 @@ cd "$(dirname "$0")/.."
 CONFIGURATION=${1:-release}
 APP=build/IleDynamique.app
 
-swift build -c "$CONFIGURATION"
-BINAIRE="$(swift build -c "$CONFIGURATION" --show-bin-path)/IleDynamique"
+ARCHITECTURES=(--arch arm64 --arch x86_64)
+swift build -c "$CONFIGURATION" "${ARCHITECTURES[@]}"
+BINAIRE="$(swift build -c "$CONFIGURATION" "${ARCHITECTURES[@]}" --show-bin-path)/IleDynamique"
 
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
