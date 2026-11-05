@@ -16,6 +16,7 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BINAIRE" "$APP/Contents/MacOS/IleDynamique"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
+./scripts/construire-aide-lecture.sh "$APP/Contents/Resources/aide-lecture.dylib"
 # Retire les attributs étendus qui peuvent invalider la signature.
 xattr -cr "$APP"
 

@@ -11,6 +11,10 @@ targets:
     platform: macOS
     sources:
       - path: Sources/IleDynamique
+    postCompileScripts:
+      - name: Aide de lecture
+        script: |
+          "$SRCROOT/scripts/construire-aide-lecture.sh" "$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/aide-lecture.dylib"
     settings:
       base:
         PRODUCT_NAME: IleDynamique
@@ -20,5 +24,5 @@ targets:
         ENABLE_HARDENED_RUNTIME: YES
         CODE_SIGN_STYLE: Automatic
         SWIFT_VERSION: "5.0"
-        MARKETING_VERSION: "1.0"
-        CURRENT_PROJECT_VERSION: "1"
+        MARKETING_VERSION: "1.1"
+        CURRENT_PROJECT_VERSION: "2"
