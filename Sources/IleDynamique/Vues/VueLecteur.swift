@@ -11,12 +11,13 @@ struct VueLecteur: View {
                 Text(musique.aUnMorceau ? musique.titre : "Aucune lecture")
                     .font(.system(size: 13, weight: .semibold))
                     .lineLimit(1)
-                Text(musique.aUnMorceau ? musique.artiste : "Lancez Musique ou Spotify")
+                Text(musique.aUnMorceau ? musique.sousTitre : "Lancez une musique ou une vidéo")
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
 
-                if musique.aUnMorceau {
+                // Pas de durée pour un direct : la barre n'aurait aucun sens.
+                if musique.aUnMorceau && musique.duree > 0 {
                     BarreProgression(musique: musique)
                 }
 
@@ -37,7 +38,7 @@ struct VueLecteur: View {
 
     private var pochette: some View {
         Group {
-            if let image = musique.pochette {
+            if let image = musique.imageAffichee {
                 Image(nsImage: image)
                     .resizable()
                     .aspectRatio(contentMode: .fill)

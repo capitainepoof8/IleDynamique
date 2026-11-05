@@ -4,27 +4,23 @@
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>fr</string>
+	<key>CFBundleDisplayName</key>
+	<string>Île Dynamique</string>
 	<key>CFBundleExecutable</key>
 	<string>IleDynamique</string>
 	<key>CFBundleIdentifier</key>
 	<string>fr.iledynamique.app</string>
 	<key>CFBundleName</key>
 	<string>IleDynamique</string>
-	<key>CFBundleDisplayName</key>
-	<string>Île Dynamique</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.0</string>
+	<string>1.1</string>
 	<key>CFBundleVersion</key>
-	<string>1</string>
+	<string>2</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>14.0</string>
 	<key>LSUIElement</key>
-	<true/>
-	<key>NSPrincipalClass</key>
-	<string>NSApplication</string>
-	<key>NSHighResolutionCapable</key>
 	<true/>
 	<key>NSAppleEventsUsageDescription</key>
 	<string>Île Dynamique pilote Musique et Spotify pour afficher le morceau en cours et contrôler la lecture.</string>
@@ -32,5 +28,9 @@
 	<string>Île Dynamique affiche votre prochain événement du calendrier.</string>
 	<key>NSCalendarsUsageDescription</key>
 	<string>Île Dynamique affiche votre prochain événement du calendrier.</string>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+	<key>NSPrincipalClass</key>
+	<string>NSApplication</string>
 </dict>
 </plist>

@@ -66,7 +66,8 @@ private struct InfosLecture {
     var urlPochette = ""
 }
 
-/// Lecture en cours dans Musique ou Spotify, via notifications distribuées + AppleScript (aucune API privée).
+/// Lecture en cours dans n'importe quelle app, via l'« À l'écoute » du système (voir `AideLecture`).
+/// Repli : Musique et Spotify via notifications distribuées + AppleScript si l'aide ne répond pas.
 @MainActor
 final class ModuleMusique: ObservableObject {
     @Published private(set) var titre = ""
@@ -76,6 +77,9 @@ final class ModuleMusique: ObservableObject {
     @Published private(set) var estEnLecture = false
     @Published private(set) var duree: Double = 0
     @Published private(set) var source: SourceMusicale?
+    /// App à l'origine de la lecture système (navigateur, lecteur vidéo…), si elle est connue.
+    @Published private(set) var nomApp = ""
+    @Published private(set) var iconeApp: NSImage?
     /// Position connue à `dateDeReference` : la vue extrapole sans interroger l'app chaque seconde.
     private(set) var positionDeReference: Double = 0
     private(set) var dateDeReference = Date()
@@ -83,8 +87,21 @@ final class ModuleMusique: ObservableObject {
     /// NSAppleScript bloque : on l'exécute sur une file série dédiée.
     private let fileAppleScript = DispatchQueue(label: "fr.iledynamique.applescript", qos: .userInitiated)
     private var clePochette = ""
+    private var bundleApp = ""
+    /// Vrai tant que l'« À l'écoute » du système fournit un morceau : il a priorité sur AppleScript.
+    private var lectureSystemeActive = false
+    private var pochetteSysteme: NSImage?
+    private var finLectureSysteme: DispatchWorkItem?
+    private lazy var aide = AideLecture(
+        surEtat: { [weak self] etat in self?.appliquer(etat) },
+        surIndisponible: { [weak self] in self?.aideIndisponible() }
+    )
 
     var aUnMorceau: Bool { !titre.isEmpty }
+
+    /// Les vidéos n'ont souvent pas d'artiste : on affiche alors l'app qui les joue.
+    var sousTitre: String { artiste.isEmpty ? nomApp : artiste }
+    var imageAffichee: NSImage? { pochette ?? iconeApp }
 
     func position(a date: Date) -> Double {
         guard estEnLecture else { return positionDeReference }
@@ -113,23 +130,26 @@ final class ModuleMusique: ObservableObject {
             }
         }
 
-        // État initial si une lecture est déjà en cours au lancement.
-        for source in SourceMusicale.allCases where source.estLancee {
-            rafraichir(source)
-        }
+        // L'aide envoie aussitôt l'état initial ; AppleScript n'est interrogé que si elle n'a rien.
+        aide.demarrer()
     }
 
     func rafraichirSiActif() {
+        if aide.estConnectee { aide.envoyer("refresh") }
         if let source { rafraichir(source) }
     }
 
     // MARK: - Commandes
 
-    func lectureOuPause() { envoyer("playpause") }
-    func suivant() { envoyer("next track") }
-    func precedent() { envoyer("previous track") }
+    func lectureOuPause() { envoyer("playpause", aide: "playpause") }
+    func suivant() { envoyer("next track", aide: "next") }
+    func precedent() { envoyer("previous track", aide: "prev") }
 
-    private func envoyer(_ commande: String) {
+    private func envoyer(_ commande: String, aide commandeAide: String) {
+        if lectureSystemeActive {
+            aide.envoyer(commandeAide)
+            return
+        }
         let cible = source ?? SourceMusicale.allCases.first(where: { $0.estLancee }) ?? .musique
         let script = "tell application id \"\(cible.identifiantBundle)\" to \(commande)"
         fileAppleScript.async {
@@ -140,7 +160,80 @@ final class ModuleMusique: ObservableObject {
 
     // MARK: - Mise à jour
 
+    private func appliquer(_ etat: EtatLectureSysteme) {
+        // L'aide n'envoie chaque pochette qu'une fois, même si elle arrive pendant un titre vide.
+        if let base64 = etat.pochette {
+            pochetteSysteme = Data(base64Encoded: base64).flatMap { NSImage(data: $0) }
+        } else if etat.pochetteRetiree == true {
+            pochetteSysteme = nil
+        }
+
+        guard !etat.titre.isEmpty else {
+            planifierFinLectureSysteme()
+            return
+        }
+
+        finLectureSysteme?.cancel()
+        finLectureSysteme = nil
+        lectureSystemeActive = true
+        source = nil
+        clePochette = ""
+        titre = etat.titre
+        artiste = etat.artiste
+        album = etat.album
+        duree = etat.duree
+        positionDeReference = etat.position
+        dateDeReference = Date()
+        estEnLecture = etat.enLecture
+        definirApp(bundle: etat.bundle)
+        pochette = pochetteSysteme
+    }
+
+    /// Au changement de morceau, le système publie brièvement un titre vide : on attend
+    /// avant de conclure que la lecture est finie, sinon l'île clignote.
+    private func planifierFinLectureSysteme() {
+        guard finLectureSysteme == nil else { return }
+        let fin = DispatchWorkItem { [weak self] in
+            MainActor.assumeIsolated { self?.terminerLectureSysteme() }
+        }
+        finLectureSysteme = fin
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5, execute: fin)
+    }
+
+    private func terminerLectureSysteme() {
+        finLectureSysteme?.cancel()
+        finLectureSysteme = nil
+        if lectureSystemeActive { vider() }
+        lectureSystemeActive = false
+        interrogerAppsScriptables()
+    }
+
+    private func definirApp(bundle: String) {
+        guard bundle != bundleApp else { return }
+        bundleApp = bundle
+        guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundle) else {
+            nomApp = ""
+            iconeApp = nil
+            return
+        }
+        nomApp = FileManager.default.displayName(atPath: url.path)
+            .replacingOccurrences(of: ".app", with: "")
+        iconeApp = NSWorkspace.shared.icon(forFile: url.path)
+    }
+
+    private func aideIndisponible() {
+        pochetteSysteme = nil
+        terminerLectureSysteme()
+    }
+
+    private func interrogerAppsScriptables() {
+        for source in SourceMusicale.allCases where source.estLancee {
+            rafraichir(source)
+        }
+    }
+
     private func notificationRecue(de source: SourceMusicale, etat: String?) {
+        guard !lectureSystemeActive else { return }
         if etat == "Stopped" {
             if self.source == source { vider() }
             return
@@ -160,6 +253,7 @@ final class ModuleMusique: ObservableObject {
     }
 
     private func appliquer(_ infos: InfosLecture, de source: SourceMusicale) {
+        guard !lectureSystemeActive else { return }
         if infos.etat == "stopped" {
             if self.source == source { vider() }
             return
@@ -196,6 +290,9 @@ final class ModuleMusique: ObservableObject {
         estEnLecture = false
         pochette = nil
         clePochette = ""
+        bundleApp = ""
+        nomApp = ""
+        iconeApp = nil
     }
 
     // MARK: - Pochette

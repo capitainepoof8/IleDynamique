@@ -28,7 +28,7 @@ struct VueCompacte: View {
             EmptyView()
         case .musique:
             Group {
-                if let pochette = vm.musique.pochette {
+                if let pochette = vm.musique.imageAffichee {
                     Image(nsImage: pochette)
                         .resizable()
                         .aspectRatio(contentMode: .fill)

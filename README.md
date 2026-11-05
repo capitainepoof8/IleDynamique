@@ -27,11 +27,13 @@ dinamique/
 │   └── IleDynamique.entitlements # Apple Events + calendrier (runtime renforcé)
 ├── scripts/construire-app.sh     # compile (universel) + emballe build/IleDynamique.app
 ├── scripts/creer-dmg.sh          # crée le DMG et le zip à distribuer
+├── scripts/construire-aide-lecture.sh # compile l'aide de lecture (.dylib universelle)
+├── Sources/AideLecture/aide-lecture.m # « À l'écoute » du système, chargée dans /usr/bin/perl
 └── Sources/IleDynamique/
     ├── App/            Principal.swift (point d'entrée), AppDelegate.swift (barre des menus)
     ├── Fenetre/        PanneauIle.swift, ControleurFenetre.swift, GeometrieEncoche.swift
     ├── ViewModel/      IleViewModel.swift (état unique : étendu, activité, survol)
-    ├── Modules/        ModuleMusique, ModuleBatterie, ModuleCalendrier,
+    ├── Modules/        ModuleMusique, AideLecture, ModuleBatterie, ModuleCalendrier,
     │                   ModuleVolumeLuminosite, ModuleEtagere
     ├── Preferences/    Preferences.swift, VuePreferences.swift, LancementAuDemarrage.swift
     └── Vues/           VueIle, FormeIle, VueCompacte, Egaliseur, VueEtendue,
@@ -43,7 +45,7 @@ dinamique/
 | Clé | Rôle |
 |---|---|
 | `LSUIElement = true` | app agent, pas d'icône dans le Dock |
-| `NSAppleEventsUsageDescription` | piloter Musique / Spotify |
+| `NSAppleEventsUsageDescription` | piloter Musique / Spotify (repli si la lecture système ne répond pas) |
 | `NSCalendarsFullAccessUsageDescription` | EventKit, macOS 14+ |
 | `NSCalendarsUsageDescription` | compatibilité |
 
@@ -75,7 +77,7 @@ Puis choisissez votre équipe dans *Signing & Capabilities* et faites ⌘R.
 ## Autorisations
 
 1. **Calendrier** : demandé au premier lancement (si le module est activé).
-2. **Automatisation** : macOS demande l'accès à Musique / Spotify à la première commande.
+2. **Automatisation** : macOS peut demander l'accès à Musique / Spotify (uniquement pour le repli AppleScript).
 3. **Accessibilité** (facultatif) : *Réglages Système → Confidentialité et sécurité → Accessibilité*,
    ajoutez Île Dynamique. Nécessaire uniquement pour détecter les touches de luminosité.
 4. **Lancer au démarrage** : dans les Préférences (icône capsule dans la barre des menus).
@@ -85,16 +87,21 @@ redemander les autorisations. Si une autorisation reste bloquée : `tccutil rese
 
 ## Choix techniques
 
-- **Aucun minuteur en arrière-plan** : survol = moniteurs `NSEvent` (souris), musique = notifications
-  distribuées de Musique/Spotify, batterie = `IOPSNotificationCreateRunLoopSource`, volume = écouteurs
+- **Aucun minuteur en arrière-plan** : survol = moniteurs `NSEvent` (souris), lecture = notifications
+  MediaRemote (repli : notifications distribuées de Musique/Spotify), batterie = `IOPSNotificationCreateRunLoopSource`, volume = écouteurs
   CoreAudio, calendrier = `EKEventStoreChanged`. Les `TimelineView` (heure, progression) ne tournent
   que lorsque l'île est ouverte.
 - **Clics** : le panneau est grand et transparent, mais `ignoresMouseEvents` reste à `true` tant que
   la souris n'est pas sur l'île, donc la barre des menus en dessous reste cliquable.
+- **Lecture de toutes les apps** : le lecteur suit l'« À l'écoute » de macOS (navigateurs, VLC, IINA,
+  Musique, Spotify…), via le framework privé MediaRemote. Depuis macOS 15.4, celui-ci ne répond qu'aux
+  processus Apple : une petite bibliothèque est donc chargée dans `/usr/bin/perl`, et communique avec
+  l'app en JSON sur stdin/stdout. Si Apple ferme cette voie, le lecteur retombe sur AppleScript
+  (Musique et Spotify uniquement). Une app qui ne publie rien dans « À l'écoute » reste invisible.
 - **Luminosité** : il n'existe pas d'API publique pour lire la luminosité de l'écran intégré sur
   Apple Silicon. Le module charge `DisplayServicesGetBrightness` dynamiquement (framework privé,
   via `dlsym`) et se désactive sans planter s'il est absent. Seules les touches de luminosité sont
-  détectées (pas le curseur du Centre de contrôle). C'est le seul point non public de l'app.
+  détectées (pas le curseur du Centre de contrôle). Avec MediaRemote, ce sont les seuls points non publics de l'app.
 
 ## Améliorations possibles
 
